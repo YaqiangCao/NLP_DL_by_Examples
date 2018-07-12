@@ -28,7 +28,8 @@ class skipGram:
     dim = 200
     nsampled = 100
     batchSize = 1000
-    epochs = 10
+    epochs = 100
+    logPath = "./logs/"
     dropProb = 1e-5
     dropCutoff = 0.95
     poorWords = None
@@ -61,7 +62,6 @@ class skipGram:
         #converting all words to number vectors
         self.indexedWords = [self.word2idx[w] for w in self.tokens if w in wordFreq]
         self.vocabSize = len(self.idx2word)
-        print(self.vocabSize)
     
     def getXy(self,):
         x,y = [],[]
@@ -76,12 +76,12 @@ class skipGram:
         self.y = np.expand_dims(y,-1)
 
     def train(self,):
-        xs = tf.placeholder(tf.int32,[self.batchSize])
-        ys = tf.placeholder(tf.int32,[self.batchSize,1])
-        weight = tf.Variable(tf.random_normal([self.vocabSize,self.dim]))
-        bias = tf.Variable(tf.random_normal([self.vocabSize]))
-        E = tf.Variable(tf.random_normal([self.vocabSize,self.dim]))
-        embed = tf.nn.embedding_lookup(E,xs)
+        xs = tf.placeholder(tf.int32,[self.batchSize],name="x")
+        ys = tf.placeholder(tf.int32,[self.batchSize,1],name="y")
+        weight = tf.Variable(tf.random_normal([self.vocabSize,self.dim]),name="weight")
+        bias = tf.Variable(tf.random_normal([self.vocabSize]),name="bias")
+        E = tf.Variable(tf.random_normal([self.vocabSize,self.dim]),name="E")
+        embed = tf.nn.embedding_lookup(E,xs,name="embed")
         loss = tf.reduce_mean(
             tf.nn.sampled_softmax_loss(
                 weights = weight,
@@ -90,20 +90,24 @@ class skipGram:
                 inputs = embed,
                 num_sampled =self.nsampled,
                 num_classes = self.vocabSize,
+                name="loss"
                 )
         )
-        train = tf.train.AdamOptimizer().minimize(loss)
-        model = tf.estimator.EstimatorSpec(mode=tf.estimator.ModeKeys.TRAIN,loss=loss,train_op=train)
-        estimator = tf.estimator.Estimator(model)
-        estimator.train(
-            tf.estimator.inputs.numpy_input_fn(
-                self.x,
-                self.y,
-                batch_size = self.batchSize,
-                num_epoches = self.epochs,
-                shuffle = True
-            )
-        )
+        train = tf.train.AdamOptimizer(name="train").minimize(loss)
+        init = tf.global_variables_initializer() 
+        with tf.Session() as sess:
+            sess.run(init)
+            for epoch in range(self.epochs):
+                t = int(self.x.shape[0]/self.batchSize-1)
+                for i in range(t):
+                    s = i*self.batchSize 
+                    e = (i+1)*self.batchSize 
+                    nx = self.x[s:e]
+                    ny = self.y[s:e]
+                    sess.run(train,feed_dict={xs:nx,ys:ny})
+                c = sess.run(loss,feed_dict={xs:nx,ys:ny})
+                s = "Epoch:%s;cost:%s"%(epoch,c)
+
 
 
 def test():
@@ -111,7 +115,7 @@ def test():
     ns = []
     for s in ss:
         ns.extend(s.split(","))
-    skipGram(ns[:10000])
+    skipGram(ns)
 
 
 if __name__ == "__main__":
