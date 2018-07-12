@@ -94,6 +94,7 @@ class skipGram:
                 )
         )
         train = tf.train.AdamOptimizer(name="train").minimize(loss)
+        saver = tf.train.Saver()
         init = tf.global_variables_initializer() 
         with tf.Session() as sess:
             sess.run(init)
@@ -107,6 +108,7 @@ class skipGram:
                     sess.run(train,feed_dict={xs:nx,ys:ny})
                 c = sess.run(loss,feed_dict={xs:nx,ys:ny})
                 s = "Epoch:%s;cost:%s"%(epoch,c)
+            saver.save(sess,"1_skipgram.ckpt")
 
 
 
