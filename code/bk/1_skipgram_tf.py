@@ -108,7 +108,7 @@ class skipGram:
                     sess.run(train,feed_dict={xs:nx,ys:ny})
                 c = sess.run(loss,feed_dict={xs:nx,ys:ny})
                 s = "Epoch:%s;cost:%s"%(epoch,c)
-            saver.save(sess,"1_skipgram.ckpt")
+            saver.save(sess,"1_skipgram_tf.ckpt")
 
 
 
